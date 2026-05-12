@@ -1,0 +1,23 @@
+# FSH Command Center — Python dependencies
+# Install: pip install -r requirements.fsh.txt
+
+# Web server
+fastapi>=0.104.0,<1
+uvicorn[standard]>=0.24.0,<1
+pydantic>=2.0,<3
+
+# Database
+psycopg2-binary>=2.9.0,<3
+
+# HTTP client (adapters)
+requests>=2.33.0,<3
+httpx>=0.28.0,<1
+
+# Anthropic Claude
+anthropic>=0.39.0,<1
+
+# Data processing (gridline skills)
+pandas>=2.0.0,<3
+
+# Env management
+python-dotenv>=1.2.0,<2
