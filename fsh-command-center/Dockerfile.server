@@ -1,0 +1,24 @@
+# FSH Command Center — Webhook Server Container
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# System deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl libpq-dev gcc && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install FSH Python deps
+COPY requirements.fsh.txt /app/requirements.fsh.txt
+RUN pip install --no-cache-dir -r /app/requirements.fsh.txt
+
+# Copy source
+COPY fsh-command-center/ /app/fsh-command-center/
+
+# Set PYTHONPATH so `from fsh_command_center` resolves
+ENV PYTHONPATH=/app
+
+EXPOSE 8000
+
+CMD ["uvicorn", "fsh_command_center.orchestrator.webhook_server:app", \
+     "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
