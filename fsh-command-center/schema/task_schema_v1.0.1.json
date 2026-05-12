@@ -1,0 +1,183 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://fermier.ai/schemas/fsh-task/v1.0.1",
+  "title": "FSH_Task_Object",
+  "description": "Canonical task contract for the FSH Command Center. v1.0.1 — adds task_type, priority, parent_task_id, idempotency_key, expires_at, context_artifacts, retry_policy. All missing fields from v1.0.0 architecture review are resolved here.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "task_id",
+    "task_type",
+    "pillar",
+    "objective",
+    "approval_level",
+    "execution_engine"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semver string. Adapters must reject tasks with unsupported schema versions and log to schema_errors table."
+    },
+    "task_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUIDv4. Globally unique task identifier."
+    },
+    "task_type": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "Workflow identifier. Examples: gridline_daily_review, seller_outreach_draft, lead_scoring_batch, buyer_packet_build, content_script_gen, sop_extraction, signal_analysis. REQUIRED — was absent from v1.0.0, causing Phase 1 validation failures.",
+      "examples": [
+        "gridline_daily_review",
+        "seller_outreach_draft",
+        "lead_scoring_batch",
+        "skip_trace_request",
+        "buyer_packet_build",
+        "follow_up_queue",
+        "dead_lead_reactivation",
+        "content_script_gen",
+        "content_distribution",
+        "product_research",
+        "listing_copy_gen",
+        "affiliate_link_build",
+        "sop_extraction",
+        "sop_packaging",
+        "signal_analysis",
+        "client_proposal_gen",
+        "client_audit_report"
+      ]
+    },
+    "pillar": {
+      "type": "string",
+      "enum": ["gridline", "logic", "commerce", "content", "forge", "trading"],
+      "description": "Business pillar. Controls default compliance flags, approval level, and storage targets via PILLAR_DEFAULTS."
+    },
+    "objective": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "Human-readable task objective. Shown in approval gate notifications and audit trail entries."
+    },
+    "priority": {
+      "type": "integer",
+      "enum": [1, 2, 3],
+      "default": 2,
+      "description": "Task queue priority. 1=critical (time-sensitive Gridline deals, Trading alerts), 2=normal, 3=low (background jobs, reporting). Workers pull ORDER BY priority ASC, created_at ASC FOR UPDATE SKIP LOCKED."
+    },
+    "parent_task_id": {
+      "type": ["string", "null"],
+      "format": "uuid",
+      "default": null,
+      "description": "UUIDv4 of parent task. Enables subtask chains: e.g., lead_scoring → seller_outreach_draft → approval → send. Required for Content pillar split-execution model (generation task → distribution task)."
+    },
+    "idempotency_key": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "Prevents duplicate task creation during retry storms. REQUIRED when compliance_flags contains 'external_action' or 'financial'. FSH Command returns HTTP 409 Conflict on duplicate idempotency_key submissions."
+    },
+    "input_artifacts": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "Artifact IDs or URLs that are CONSUMED/mutated by this task."
+    },
+    "context_artifacts": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "READ-ONLY reference artifacts. Not consumed — used for context only (e.g., buy_box config, compliance templates, prior lead scores). Added in v1.0.1 to distinguish from input_artifacts."
+    },
+    "required_outputs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "Expected output artifact types or identifiers."
+    },
+    "approval_level": {
+      "type": "integer",
+      "enum": [0, 1, 2],
+      "description": "0=no gate, 1=notify only (operator informed but not blocked), 2=require explicit human approval before any external action proceeds."
+    },
+    "execution_engine": {
+      "type": "string",
+      "enum": ["hermes", "abacus", "claude", "manus"],
+      "description": "Primary runtime adapter. For Content pillar split-execution, the parent task uses 'claude' (generation) and spawns a child task with 'hermes' (distribution). See parent_task_id."
+    },
+    "storage_targets": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["postgres", "notion", "local_path", "git"]
+      },
+      "default": ["postgres"],
+      "description": "Artifact persistence targets. Postgres is ALWAYS the synchronous primary. Notion and Git are async secondaries via retry_queue. If Postgres fails, halt entire operation."
+    },
+    "deadline": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "default": null,
+      "description": "SOFT deadline — operator alert is sent if task is not completed by this time. Does not auto-reject. See expires_at for hard expiry."
+    },
+    "expires_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "default": null,
+      "description": "HARD expiry — task is auto-rejected and logged to audit_trail if not processed by this time. Critical for Gridline: deals have hard expiry windows (e.g., 48h after distress signal detection). Added in v1.0.1."
+    },
+    "compliance_flags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "rcw_18_85",
+          "pii",
+          "external_action",
+          "irreversible",
+          "financial",
+          "affiliate_disclosure"
+        ]
+      },
+      "default": [],
+      "description": "Compliance requirements. Any flag here forces a Claude compliance REVIEW before HANDOFF. 'external_action' + 'financial' require idempotency_key. 'rcw_18_85' requires rcw_status != 'not_reviewed' on associated lead record."
+    },
+    "retry_policy": {
+      "type": "object",
+      "default": { "max_attempts": 3, "backoff_strategy": "exponential", "retry_on": ["timeout", "adapter_error"] },
+      "properties": {
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 3
+        },
+        "backoff_strategy": {
+          "type": "string",
+          "enum": ["fixed", "exponential", "none"],
+          "default": "exponential"
+        },
+        "retry_on": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["timeout", "adapter_error"],
+          "description": "Error types that trigger retry. 'compliance_failure' should NOT be in retry_on — it requires human review."
+        }
+      },
+      "description": "Per-task retry configuration. After max_attempts, task moves to dead_letter_queue. Added in v1.0.1."
+    }
+  },
+  "additionalProperties": false,
+  "if": {
+    "properties": {
+      "compliance_flags": {
+        "contains": { "enum": ["external_action", "financial"] }
+      }
+    }
+  },
+  "then": {
+    "required": ["idempotency_key"],
+    "properties": {
+      "idempotency_key": { "type": "string", "minLength": 1 }
+    }
+  }
+}
