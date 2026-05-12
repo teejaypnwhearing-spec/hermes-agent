@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://fermier.ai/schemas/fsh-task/v1.0.0",
+  "title": "FSH_Task_Object",
+  "description": "Canonical task contract for the FSH Command Center. All adapters must accept and return this structure. Version 1.0.0 — baseline schema.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "task_id",
+    "pillar",
+    "objective",
+    "approval_level",
+    "execution_engine"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semver string. All adapters must reject tasks with unsupported schema versions."
+    },
+    "task_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUIDv4. Globally unique task identifier."
+    },
+    "pillar": {
+      "type": "string",
+      "enum": ["gridline", "logic", "commerce", "content", "forge", "trading"],
+      "description": "Business pillar this task belongs to. Controls default routing and compliance rules."
+    },
+    "objective": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "Human-readable task objective. Used in approval notifications and audit trail."
+    },
+    "input_artifacts": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Artifact IDs or URLs that are CONSUMED by this task (mutated or processed).",
+      "default": []
+    },
+    "required_outputs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Expected output artifact types or identifiers.",
+      "default": []
+    },
+    "approval_level": {
+      "type": "integer",
+      "enum": [0, 1, 2],
+      "description": "0=no gate, 1=notify only, 2=require explicit human approval before external action."
+    },
+    "execution_engine": {
+      "type": "string",
+      "enum": ["hermes", "abacus", "claude", "manus"],
+      "description": "Primary runtime adapter to route this task to."
+    },
+    "storage_targets": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["postgres", "notion", "local_path", "git"]
+      },
+      "description": "Where to persist artifacts. Postgres is always written first (synchronous primary).",
+      "default": ["postgres"]
+    },
+    "deadline": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Soft deadline — operator alert if task is not completed by this time.",
+      "default": null
+    },
+    "compliance_flags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "rcw_18_85",
+          "pii",
+          "external_action",
+          "irreversible",
+          "financial",
+          "affiliate_disclosure"
+        ]
+      },
+      "description": "Compliance requirements. Tasks with any flag here must pass through compliance review.",
+      "default": []
+    }
+  },
+  "additionalProperties": false,
+  "_review_notes": {
+    "missing_fields": [
+      "task_type — referenced in Gridline workflow but absent here; causes Phase 1 validation failures",
+      "priority — no queue ordering without this field",
+      "parent_task_id — subtask chains not possible without this",
+      "idempotency_key — required for financial/external action retry safety",
+      "expires_at — hard expiry differs from soft deadline; Gridline deals have hard expiry windows",
+      "context_artifacts — read-only reference artifacts differ from consumed input_artifacts",
+      "retry_policy — per-task retry configuration missing"
+    ],
+    "upgrade_path": "See task_schema_v1.0.1.json for corrected schema addressing all P0 gaps"
+  }
+}
