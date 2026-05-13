@@ -13,6 +13,10 @@ Run:
     uvicorn orchestrator.webhook_server:app --host 0.0.0.0 --port 8000 --reload
 
 Endpoints:
+    GET  /approve/{approval_id}      ← confirmation page (approve)
+    GET  /reject/{approval_id}       ← confirmation page (reject)
+    POST /approve/{approval_id}/confirm  ← submit approval
+    POST /reject/{approval_id}/confirm   ← submit rejection
     POST /webhook/approval-decision  ← n8n posts here when human decides
     POST /webhook/retry              ← n8n retry queue trigger
     GET  /health                     ← health check
@@ -34,12 +38,16 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from orchestrator.orchestrator import FSHOrchestrator
+from orchestrator.approval_endpoints import router as approval_router
 
 app = FastAPI(
     title="FSH Command Center Webhook Server",
     description="Approval callbacks and async task management for FSH",
     version="1.0.1",
 )
+
+# Mount approval confirmation pages (GET /approve/{id}, GET /reject/{id}, etc.)
+app.include_router(approval_router)
 
 _orchestrator: FSHOrchestrator | None = None
 

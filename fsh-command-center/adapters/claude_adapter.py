@@ -14,8 +14,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-import anthropic  # type: ignore  # install: pip install anthropic
-
+from .claude_executor import ClaudeExecutor, ClaudeExecutorError
 from .base import (
     FSHAdapterBase,
     FSHTask,
@@ -47,12 +46,14 @@ Respond with structured JSON containing:
 
 class ClaudeAdapter(FSHAdapterBase):
     """
-    Sends FSH tasks to Anthropic Claude API.
+    Sends FSH tasks to Anthropic Claude via ClaudeExecutor.
 
-    Configuration (from environment):
+    Inject a mock executor via the `executor` parameter for unit tests
+    (no API key required).
+
+    Configuration (from environment when executor is not injected):
         ANTHROPIC_API_KEY   — Anthropic API key
-        CLAUDE_MODEL        — model name (default: claude-opus-4-5)
-        CLAUDE_MAX_TOKENS   — max response tokens (default: 4096)
+        FSH_CLAUDE_MODEL    — model name (default: claude-opus-4-7)
     """
 
     adapter_name = "claude"
@@ -62,11 +63,13 @@ class ClaudeAdapter(FSHAdapterBase):
         api_key:    str | None = None,
         model:      str | None = None,
         max_tokens: int = 4096,
+        executor:   ClaudeExecutor | None = None,
     ):
-        self.api_key    = api_key    or os.environ["ANTHROPIC_API_KEY"]
-        self.model      = model      or os.environ.get("CLAUDE_MODEL", "claude-opus-4-5")
-        self.max_tokens = max_tokens
-        self._client    = anthropic.Anthropic(api_key=self.api_key)
+        self._executor = executor or ClaudeExecutor(
+            api_key    = api_key,
+            model      = model,
+            max_tokens = max_tokens,
+        )
 
     # ── Phase 1 ───────────────────────────────────────────────────────────────
 
@@ -112,64 +115,50 @@ class ClaudeAdapter(FSHAdapterBase):
             compliance_flags = ", ".join(task.compliance_flags) or "none",
             task_type        = task.task_type,
         )
-
         user_message = self._build_user_message(task)
-        self.audit_log(task, "claude_request_start", {"model": self.model})
+
+        self.audit_log(task, "claude_request_start", {"model": self._executor.model})
 
         try:
-            response = self._client.messages.create(
-                model      = self.model,
-                max_tokens = self.max_tokens,
-                system     = system_prompt,
-                messages   = [{"role": "user", "content": user_message}],
+            result = self._executor.run(
+                system_prompt = system_prompt,
+                user_message  = user_message,
+                task_id       = task.task_id,
             )
-        except anthropic.APITimeoutError:
+        except ClaudeExecutorError as exc:
+            self.audit_log(task, "claude_request_error", {
+                "error_class": exc.error_class,
+                "status_code": exc.status_code,
+            })
             return FSHTaskResult(
                 task_id        = task.task_id,
                 success        = False,
-                result_summary = "Claude API timed out",
-                error_detail   = {"error_class": "timeout"},
-            )
-        except anthropic.APIStatusError as exc:
-            return FSHTaskResult(
-                task_id        = task.task_id,
-                success        = False,
-                result_summary = f"Claude API error: {exc.status_code}",
+                result_summary = str(exc),
                 error_detail   = {
-                    "error_class": "api_error",
+                    "error_class": exc.error_class,
                     "status_code": exc.status_code,
-                    "message":     str(exc.message)[:500],
                 },
             )
 
-        content = response.content[0].text if response.content else ""
-        self.audit_log(task, "claude_request_end",
-                       {"stop_reason": response.stop_reason,
-                        "input_tokens": response.usage.input_tokens,
-                        "output_tokens": response.usage.output_tokens})
+        self.audit_log(task, "claude_request_end", {
+            "model":         result.model,
+            "input_tokens":  result.usage.get("input_tokens"),
+            "output_tokens": result.usage.get("output_tokens"),
+        })
 
         return FSHTaskResult(
             task_id        = task.task_id,
-            success        = response.stop_reason == "end_turn",
-            result_summary = content[:4000],
-            artifacts      = [{"type": "text", "label": "claude_response", "content": content}],
+            success        = result.success,
+            result_summary = result.text[:4000],
+            artifacts      = [{"type": "text", "label": "claude_response", "content": result.text}],
         )
 
     # ── Phase 3 ───────────────────────────────────────────────────────────────
 
     def translate_out(self, result: FSHTaskResult) -> dict[str, Any]:
-        import json
-        # Attempt to parse Claude's JSON response for structured handoff
-        parsed = None
-        if result.success and result.result_summary:
-            try:
-                # Claude sometimes wraps JSON in markdown fences
-                text = result.result_summary.strip()
-                if text.startswith("```"):
-                    text = "\n".join(text.split("\n")[1:-1])
-                parsed = json.loads(text)
-            except (json.JSONDecodeError, ValueError):
-                parsed = None
+        # Use executor's JSON extraction for structured handoff
+        from .claude_executor import ClaudeExecutor
+        parsed = ClaudeExecutor._extract_json(result.result_summary or "")
 
         return {
             "task_id":        result.task_id,
