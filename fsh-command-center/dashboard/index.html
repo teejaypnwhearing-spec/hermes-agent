@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FSH Command Center</title>
+  <link rel="stylesheet" href="/dashboard/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+</head>
+<body>
+  <div id="app">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">F</div>
+        <div class="title">
+          <h1>FSH Command</h1>
+          <p>Orchestrator v1.1</p>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-item active" data-panel="mission-control" onclick="switchPanel('mission-control')">
+          <span class="icon">⬡</span>
+          <span class="nav-label">Mission Control</span>
+        </div>
+        <div class="nav-item" data-panel="approvals" onclick="switchPanel('approvals')">
+          <span class="icon">⚑</span>
+          <span class="nav-label">Approval Queue</span>
+        </div>
+        <div class="nav-item" data-panel="audit" onclick="switchPanel('audit')">
+          <span class="icon">◈</span>
+          <span class="nav-label">Audit Trail</span>
+        </div>
+        <div class="nav-item" data-panel="terminal" onclick="switchPanel('terminal')">
+          <span class="icon">▶</span>
+          <span class="nav-label">Command Terminal</span>
+        </div>
+        <div class="nav-item" data-panel="agents" onclick="switchPanel('agents')">
+          <span class="icon">◉</span>
+          <span class="nav-label">Agents</span>
+        </div>
+      </nav>
+      <div class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
+        ◀
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
+      <!-- Status Bar -->
+      <div class="status-bar" id="statusBar">
+        <span class="status-dot online"></span>
+        <span>FSH ONLINE</span>
+        <span>│</span>
+        <span id="statusBackend">SQLITE</span>
+        <span>│</span>
+        <span id="statusTasks">0 TASKS</span>
+        <span>│</span>
+        <span id="statusApprovals">0 PENDING APPROVALS</span>
+        <span style="margin-left:auto" id="statusTime"></span>
+      </div>
+
+      <!-- Panels -->
+      <div class="main" id="mainContent">
+
+        <!-- Mission Control Panel -->
+        <div class="panel" id="panel-mission-control">
+          <div class="main-header">
+            <h2>MISSION CONTROL</h2>
+            <p>6-pillar operational health · 4-agent runtime status · live task stream</p>
+          </div>
+
+          <!-- Pillar Health Grid -->
+          <div class="pillar-grid" id="pillarGrid"></div>
+
+          <!-- Agent Status Row -->
+          <div class="agent-row" id="agentRow"></div>
+
+          <!-- Live Task Stream -->
+          <div class="task-stream">
+            <div class="task-stream-header">
+              <h3>Live Task Stream</h3>
+              <div class="task-filters">
+                <button class="filter-btn active" onclick="filterTasks('all')">ALL</button>
+                <button class="filter-btn" onclick="filterTasks('executing')">ACTIVE</button>
+                <button class="filter-btn" onclick="filterTasks('queued')">QUEUED</button>
+                <button class="filter-btn" onclick="filterTasks('awaiting_approval')">PENDING</button>
+                <button class="filter-btn" onclick="filterTasks('failed')">FAILED</button>
+              </div>
+            </div>
+            <table class="task-table">
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Task Type</th>
+                  <th>Pillar</th>
+                  <th>Engine</th>
+                  <th>Priority</th>
+                  <th>Objective</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody id="taskTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Approval Queue Panel -->
+        <div class="panel" id="panel-approvals" style="display:none">
+          <div class="main-header">
+            <h2>APPROVAL QUEUE</h2>
+            <p>Pending human decisions · compliance-flagged tasks requiring sign-off</p>
+          </div>
+          <div class="approval-list" id="approvalList"></div>
+        </div>
+
+        <!-- Audit Trail Panel -->
+        <div class="panel" id="panel-audit" style="display:none">
+          <div class="main-header">
+            <h2>AUDIT TRAIL</h2>
+            <p>Chronological PLAN → EXECUTE → REVIEW → LOG → HANDOFF event log</p>
+          </div>
+          <div style="margin-bottom:16px">
+            <div class="task-filters">
+              <button class="filter-btn active" onclick="filterAudit(null)">ALL PILLARS</button>
+              <button class="filter-btn" onclick="filterAudit('gridline')">GRIDLINE</button>
+              <button class="filter-btn" onclick="filterAudit('logic')">LOGIC</button>
+              <button class="filter-btn" onclick="filterAudit('commerce')">COMMERCE</button>
+              <button class="filter-btn" onclick="filterAudit('content')">CONTENT</button>
+              <button class="filter-btn" onclick="filterAudit('forge')">FORGE</button>
+              <button class="filter-btn" onclick="filterAudit('trading')">TRADING</button>
+            </div>
+          </div>
+          <div class="audit-list" id="auditList"></div>
+        </div>
+
+        <!-- Command Terminal Panel -->
+        <div class="panel" id="panel-terminal" style="display:none">
+          <div class="main-header">
+            <h2>COMMAND TERMINAL</h2>
+            <p>Submit tasks to the FSH orchestrator · pillar-aware auto-configuration</p>
+          </div>
+          <div class="terminal-layout">
+            <div class="terminal-form">
+              <div class="form-group">
+                <label>Pillar</label>
+                <select id="termPillar" onchange="onPillarChange()">
+                  <option value="">Select pillar...</option>
+                  <option value="gridline">Gridline</option>
+                  <option value="logic">Logic</option>
+                  <option value="commerce">Commerce</option>
+                  <option value="content">Content</option>
+                  <option value="forge">Forge</option>
+                  <option value="trading">Trading</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Task Type <span style="color:var(--accent-red)">*</span></label>
+                <input type="text" id="termTaskType" placeholder="e.g. gridline_daily_review" oninput="updateJsonPreview()">
+              </div>
+              <div class="form-group">
+                <label>Objective <span style="color:var(--accent-red)">*</span></label>
+                <textarea id="termObjective" rows="3" placeholder="Describe the task objective..." oninput="updateJsonPreview()"></textarea>
+              </div>
+              <div class="form-group">
+                <label>Priority</label>
+                <select id="termPriority" onchange="updateJsonPreview()">
+                  <option value="1">P1 — Critical</option>
+                  <option value="2" selected>P2 — Standard</option>
+                  <option value="3">P3 — Low</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Idempotency Key</label>
+                <input type="text" id="termIdempotency" placeholder="Required for financial/external tasks" oninput="updateJsonPreview()">
+              </div>
+              <div class="form-group">
+                <label>Execution Engine <span style="color:var(--text-muted)">(auto-filled)</span></label>
+                <input type="text" id="termEngine" readonly>
+              </div>
+              <div class="form-group">
+                <label>Approval Level <span style="color:var(--text-muted)">(auto-filled)</span></label>
+                <input type="text" id="termApprovalLevel" readonly>
+              </div>
+              <div class="form-group">
+                <label>Compliance Flags <span style="color:var(--text-muted)">(auto-filled)</span></label>
+                <input type="text" id="termCompliance" readonly>
+              </div>
+              <button class="btn btn-primary" onclick="submitTask()" style="width:100%;margin-top:8px">
+                ▶ SUBMIT TASK
+              </button>
+            </div>
+            <div class="json-preview">
+              <h3>Live JSON Preview</h3>
+              <pre id="jsonPreview">{ }</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Agents Panel -->
+        <div class="panel" id="panel-agents" style="display:none">
+          <div class="main-header">
+            <h2>AGENTS</h2>
+            <p>Runtime status · adapter contract wiring · engine health</p>
+          </div>
+          <div class="agents-grid" id="agentsGrid"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Task Detail Drawer -->
+  <div id="drawerOverlay" class="drawer-overlay" style="display:none" onclick="closeDrawer()"></div>
+  <div id="drawer" class="drawer" style="display:none">
+    <button class="close-btn" onclick="closeDrawer()">✕</button>
+    <h3>Task Detail</h3>
+    <div id="drawerContent"></div>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div id="confirmModal" class="modal-overlay" style="display:none">
+    <div class="modal">
+      <h3 id="confirmTitle">Confirm</h3>
+      <p id="confirmMessage"></p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeConfirm()">Cancel</button>
+        <button class="btn" id="confirmBtn" onclick="confirmAction()">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    // ── Configuration ──────────────────────────────────────────────────
+    // API is same-origin when served by FastAPI; override only for separate dev servers
+    const API_BASE = window.API_URL_OVERRIDE || '';
+
+    const PILLAR_COLORS = {
+      gridline: '#22c55e', logic: '#3b82f6', commerce: '#f97316',
+      content: '#a855f7', forge: '#ef4444', trading: '#eab308'
+    };
+
+    const PILLAR_DEFAULTS = {
+      gridline:  { engine: 'abacus', approval: 1, flags: ['rcw_18_85', 'pii'] },
+      logic:     { engine: 'claude',  approval: 0, flags: ['pii'] },
+      commerce:  { engine: 'abacus', approval: 1, flags: ['external_action', 'affiliate_disclosure'] },
+      content:   { engine: 'hermes',  approval: 0, flags: [] },
+      forge:     { engine: 'claude',  approval: 2, flags: ['irreversible'] },
+      trading:   { engine: 'abacus', approval: 2, flags: ['financial', 'external_action'] },
+    };
+
+    const AGENT_ICONS = { claude: '🧠', hermes: '⚡', abacus: '🧮', manus: '🤖' };
+    const AGENT_COLORS = { claude: '#3b82f6', hermes: '#a855f7', abacus: '#22c55e', manus: '#f97316' };
+
+    // ── State ──────────────────────────────────────────────────────────
+    let tasks = [];
+    let approvals = [];
+    let auditEntries = [];
+    let agents = [];
+    let dashboardStats = {};
+    let currentFilter = 'all';
+    let currentAuditPillar = null;
+    let selectedTask = null;
+    let pendingConfirmAction = null;
+
+    // ── API ────────────────────────────────────────────────────────────
+    async function api(path) {
+      const res = await fetch(`${API_BASE}${path}`);
+      if (!res.ok) throw new Error(`API ${res.status}: ${path}`);
+      return res.json();
+    }
+
+    async function apiPost(path, body) {
+      const res = await fetch(`${API_BASE}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || res.statusText);
+      }
+      return res.json();
+    }
+
+    // ── Data Fetching ──────────────────────────────────────────────────
+    async function fetchAll() {
+      try {
+        const [tasksRes, approvalsRes, auditRes, agentsRes, statsRes] = await Promise.all([
+          api('/tasks?limit=100'),
+          api('/approvals'),
+          api('/audit?limit=200'),
+          api('/agents/status'),
+          api('/dashboard/stats'),
+        ]);
+        tasks = tasksRes.tasks || [];
+        approvals = approvalsRes.approvals || [];
+        auditEntries = auditRes.audit || [];
+        agents = agentsRes.agents || [];
+        dashboardStats = statsRes;
+        render();
+      } catch (e) {
+        console.error('Fetch error:', e);
+        showToast('API connection failed — is the server running?', 'error');
+      }
+    }
+
+    // ── Rendering ──────────────────────────────────────────────────────
+    function render() {
+      renderStatusBar();
+      renderPillarGrid();
+      renderAgentRow();
+      renderTaskTable();
+      renderApprovals();
+      renderAudit();
+      renderAgents();
+    }
+
+    function renderStatusBar() {
+      document.getElementById('statusBackend').textContent = (dashboardStats.backend || 'sqlite').toUpperCase();
+      document.getElementById('statusTasks').textContent = `${tasks.length} TASKS`;
+      document.getElementById('statusApprovals').textContent = `${approvals.length} PENDING APPROVALS`;
+      document.getElementById('statusTime').textContent = new Date().toLocaleTimeString();
+    }
+
+    function renderPillarGrid() {
+      const grid = document.getElementById('pillarGrid');
+      const pillars = dashboardStats.pillars || {};
+      grid.innerHTML = Object.entries(PILLAR_COLORS).map(([name, color]) => {
+        const s = pillars[name] || { active: 0, pending: 0, failed: 0, completed_24h: 0 };
+        return `
+          <div class="pillar-card">
+            <div class="pillar-name">
+              <span class="dot" style="background:${color}"></span>
+              ${name}
+            </div>
+            <div class="stats">
+              <div class="stat">
+                <div class="stat-value" style="color:var(--accent-blue)">${s.active}</div>
+                <div class="stat-label">Active</div>
+              </div>
+              <div class="stat">
+                <div class="stat-value" style="color:var(--accent-yellow)">${s.pending}</div>
+                <div class="stat-label">Pending</div>
+              </div>
+              <div class="stat">
+                <div class="stat-value" style="color:var(--accent-red)">${s.failed}</div>
+                <div class="stat-label">Failed</div>
+              </div>
+              <div class="stat">
+                <div class="stat-value" style="color:var(--accent-green)">${s.completed_24h}</div>
+                <div class="stat-label">Done</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderAgentRow() {
+      const row = document.getElementById('agentRow');
+      row.innerHTML = agents.map(a => `
+        <div class="agent-card">
+          <div class="agent-icon ${a.busy ? 'busy' : ''}" style="background:${AGENT_COLORS[a.id]}22">
+            ${AGENT_ICONS[a.id] || '●'}
+          </div>
+          <div class="agent-info">
+            <div class="agent-name">${a.name}</div>
+            <div class="agent-role">${a.role}</div>
+          </div>
+          <span class="agent-status ${a.status}">${a.status}</span>
+        </div>
+      `).join('');
+    }
+
+    function renderTaskTable() {
+      const tbody = document.getElementById('taskTableBody');
+      const filtered = currentFilter === 'all'
+        ? tasks
+        : tasks.filter(t => t.status === currentFilter);
+
+      tbody.innerHTML = filtered.map(t => `
+        <tr onclick="openDrawer('${t.task_id}')">
+          <td>
+            <span class="status-badge ${t.status}">
+              <span class="dot"></span>
+              ${t.status.replace(/_/g, ' ')}
+            </span>
+          </td>
+          <td style="font-family:var(--font-mono);font-size:12px">${t.task_type}</td>
+          <td><span class="pillar-badge ${t.pillar}">${t.pillar}</span></td>
+          <td><span class="engine-badge">${t.execution_engine}</span></td>
+          <td><span class="priority-badge p${t.priority}">P${t.priority}</span></td>
+          <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary)">${t.objective}</td>
+          <td style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">${timeAgo(t.created_at)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderApprovals() {
+      const list = document.getElementById('approvalList');
+      if (approvals.length === 0) {
+        list.innerHTML = '<div class="empty-state"><div class="icon">✓</div><h3>No Pending Approvals</h3><p>All clear — no tasks awaiting human sign-off.</p></div>';
+        return;
+      }
+      list.innerHTML = approvals.map(a => `
+        <div class="approval-card">
+          <div class="approval-header">
+            <div class="approval-title">${a.task_type || 'Unknown Task'}</div>
+            <span class="countdown">${a.hours_remaining != null ? a.hours_remaining.toFixed(1) + 'h remaining' : ''}</span>
+          </div>
+          <div class="approval-meta">
+            <span class="pillar-badge ${a.pillar || ''}">${a.pillar || '—'}</span>
+            <span class="engine-badge">Level ${a.approval_level}</span>
+            ${a.context_snapshot && a.context_snapshot.compliance_flags ? a.context_snapshot.compliance_flags.map(f =>
+              `<span style="font-family:var(--font-mono);font-size:10px;padding:2px 6px;border-radius:3px;background:rgba(239,68,68,0.15);color:var(--accent-red)">${f}</span>`
+            ).join('') : ''}
+          </div>
+          <div class="approval-reason">${a.reason || 'No reason provided'}</div>
+          <div class="approval-actions">
+            <button class="btn btn-approve" onclick="event.stopPropagation();approveTask('${a.approval_id}','${a.task_id}')">✓ APPROVE</button>
+            <button class="btn btn-reject" onclick="event.stopPropagation();rejectTask('${a.approval_id}','${a.task_id}')">✕ REJECT</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderAudit() {
+      const list = document.getElementById('auditList');
+      const filtered = currentAuditPillar
+        ? auditEntries.filter(e => e.pillar === currentAuditPillar)
+        : auditEntries;
+
+      list.innerHTML = filtered.map(e => {
+        const phaseClass = 'phase-' + (e.action || '').replace(/_/g, '_');
+        return `
+          <div class="audit-entry">
+            <div class="audit-time">${formatTime(e.created_at)}</div>
+            <div class="audit-phase ${phaseClass}">${(e.action || '').replace(/_/g, ' ')}</div>
+            <div class="audit-body">
+              <div class="audit-action">
+                <span class="pillar-badge ${e.pillar || ''}" style="font-size:9px">${e.pillar || '—'}</span>
+                ${' '}by <strong>${e.actor || '—'}</strong>
+              </div>
+              ${e.detail && Object.keys(e.detail).length > 0 ? `<div class="audit-detail">${JSON.stringify(e.detail, null, 2)}</div>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderAgents() {
+      const grid = document.getElementById('agentsGrid');
+      grid.innerHTML = agents.map(a => `
+        <div class="agent-detail-card">
+          <div class="agent-header">
+            <div class="agent-avatar" style="background:${AGENT_COLORS[a.id]}22;color:${AGENT_COLORS[a.id]}">
+              ${AGENT_ICONS[a.id] || '●'}
+            </div>
+            <div class="agent-meta">
+              <div style="font-family:var(--font-mono);font-weight:600">${a.name}</div>
+              <div style="font-size:12px;color:var(--text-muted)">${a.role}</div>
+            </div>
+            <span class="agent-status ${a.status}">${a.status}</span>
+          </div>
+          <table class="contract-table">
+            <tr><td>Adapter</td><td style="color:${a.adapter_wired ? 'var(--accent-green)' : 'var(--accent-red)'}">${a.adapter_wired ? '✓ Wired' : '✕ Stub'}</td></tr>
+            <tr><td>Pillars</td><td>${(a.pillars || []).map(p => `<span class="pillar-badge ${p}" style="font-size:9px;margin-right:4px">${p}</span>`).join('')}</td></tr>
+            <tr><td>Active Tasks</td><td style="font-family:var(--font-mono)">${a.active_tasks || 0}</td></tr>
+            <tr><td>Status</td><td>${a.busy ? '<span style="color:var(--accent-blue)">● BUSY</span>' : '<span style="color:var(--accent-green)">● IDLE</span>'}</td></tr>
+          </table>
+        </div>
+      `).join('');
+    }
+
+    // ── Interactions ───────────────────────────────────────────────────
+    function switchPanel(name) {
+      document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
+      document.getElementById(`panel-${name}`).style.display = 'block';
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.panel === name));
+    }
+
+    function toggleSidebar() {
+      const sb = document.getElementById('sidebar');
+      sb.classList.toggle('collapsed');
+      document.querySelector('.sidebar-toggle').textContent = sb.classList.contains('collapsed') ? '▶' : '◀';
+    }
+
+    function filterTasks(status) {
+      currentFilter = status;
+      document.querySelectorAll('.task-stream .filter-btn').forEach(b =>
+        b.classList.toggle('active', b.textContent.toLowerCase().replace('all','all') === (status === 'all' ? 'all' : status))
+      );
+      renderTaskTable();
+    }
+
+    function filterAudit(pillar) {
+      currentAuditPillar = pillar;
+      document.querySelectorAll('#panel-audit .filter-btn').forEach(b => {
+        const p = b.textContent.toLowerCase().replace('all pillars', '');
+        b.classList.toggle('active', pillar === null ? p === '' : p === pillar);
+      });
+      renderAudit();
+    }
+
+    function openDrawer(taskId) {
+      const task = tasks.find(t => t.task_id === taskId);
+      if (!task) return;
+      selectedTask = task;
+      const drawer = document.getElementById('drawer');
+      const overlay = document.getElementById('drawerOverlay');
+      const content = document.getElementById('drawerContent');
+
+      content.innerHTML = `
+        <div class="detail-row"><div class="detail-label">Task ID</div><div class="detail-value" style="font-family:var(--font-mono);font-size:11px">${task.task_id}</div></div>
+        <div class="detail-row"><div class="detail-label">Type</div><div class="detail-value" style="font-family:var(--font-mono)">${task.task_type}</div></div>
+        <div class="detail-row"><div class="detail-label">Pillar</div><div class="detail-value"><span class="pillar-badge ${task.pillar}">${task.pillar}</span></div></div>
+        <div class="detail-row"><div class="detail-label">Status</div><div class="detail-value"><span class="status-badge ${task.status}"><span class="dot"></span>${task.status.replace(/_/g,' ')}</span></div></div>
+        <div class="detail-row"><div class="detail-label">Engine</div><div class="detail-value"><span class="engine-badge">${task.execution_engine}</span></div></div>
+        <div class="detail-row"><div class="detail-label">Priority</div><div class="detail-value"><span class="priority-badge p${task.priority}">P${task.priority}</span></div></div>
+        <div class="detail-row"><div class="detail-label">Approval</div><div class="detail-value">Level ${task.approval_level}</div></div>
+        <div class="detail-row"><div class="detail-label">Compliance</div><div class="detail-value">${(task.compliance_flags||[]).map(f => `<span style="font-family:var(--font-mono);font-size:10px;padding:2px 6px;border-radius:3px;background:rgba(239,68,68,0.15);color:var(--accent-red);margin-right:4px">${f}</span>`).join('') || '—'}</div></div>
+        <div class="detail-row"><div class="detail-label">Objective</div><div class="detail-value">${task.objective}</div></div>
+        ${task.result_summary ? `<div class="detail-row"><div class="detail-label">Result</div><div class="detail-value" style="color:var(--accent-green)">${task.result_summary}</div></div>` : ''}
+        ${task.error_detail ? `<div class="detail-row"><div class="detail-label">Error</div><div class="detail-value" style="color:var(--accent-red);font-family:var(--font-mono);font-size:12px">${typeof task.error_detail === 'string' ? task.error_detail : JSON.stringify(task.error_detail, null, 2)}</div></div>` : ''}
+        <div class="detail-row"><div class="detail-label">Created</div><div class="detail-value" style="font-family:var(--font-mono);font-size:11px">${task.created_at}</div></div>
+        ${task.idempotency_key ? `<div class="detail-row"><div class="detail-label">Idempotency</div><div class="detail-value" style="font-family:var(--font-mono);font-size:11px">${task.idempotency_key}</div></div>` : ''}
+      `;
+
+      overlay.style.display = 'block';
+      drawer.style.display = 'block';
+    }
+
+    function closeDrawer() {
+      document.getElementById('drawerOverlay').style.display = 'none';
+      document.getElementById('drawer').style.display = 'none';
+    }
+
+    async function approveTask(approvalId, taskId) {
+      showConfirm('Approve Task', 'Are you sure you want to approve this task? It will begin executing immediately.', async () => {
+        try {
+          await apiPost('/webhook/approval-decision', {
+            approval_id: approvalId,
+            task_id: taskId,
+            decision: 'approved',
+            decided_by: 'dashboard',
+          });
+          showToast('Task approved — execution started', 'success');
+          await fetchAll();
+        } catch (e) {
+          showToast('Approval failed: ' + e.message, 'error');
+        }
+      }, 'approve');
+    }
+
+    async function rejectTask(approvalId, taskId) {
+      showConfirm('Reject Task', 'Are you sure you want to reject this task? This action cannot be undone.', async () => {
+        try {
+          await apiPost('/webhook/approval-decision', {
+            approval_id: approvalId,
+            task_id: taskId,
+            decision: 'rejected',
+            decided_by: 'dashboard',
+            decision_reason: 'Rejected via dashboard',
+          });
+          showToast('Task rejected', 'info');
+          await fetchAll();
+        } catch (e) {
+          showToast('Rejection failed: ' + e.message, 'error');
+        }
+      }, 'reject');
+    }
+
+    function onPillarChange() {
+      const pillar = document.getElementById('termPillar').value;
+      const defaults = PILLAR_DEFAULTS[pillar];
+      if (defaults) {
+        document.getElementById('termEngine').value = defaults.engine;
+        document.getElementById('termApprovalLevel').value = 'Level ' + defaults.approval;
+        document.getElementById('termCompliance').value = defaults.flags.join(', ') || '—';
+      } else {
+        document.getElementById('termEngine').value = '';
+        document.getElementById('termApprovalLevel').value = '';
+        document.getElementById('termCompliance').value = '';
+      }
+      updateJsonPreview();
+    }
+
+    function updateJsonPreview() {
+      const pillar = document.getElementById('termPillar').value;
+      const taskType = document.getElementById('termTaskType').value;
+      const objective = document.getElementById('termObjective').value;
+      const priority = parseInt(document.getElementById('termPriority').value);
+      const idempotency = document.getElementById('termIdempotency').value;
+      const defaults = PILLAR_DEFAULTS[pillar] || {};
+
+      const payload = {
+        task_type: taskType || '(required)',
+        pillar: pillar || '(required)',
+        objective: objective || '(required)',
+        execution_engine: defaults.engine || '(auto)',
+        approval_level: defaults.approval ?? 0,
+        priority,
+        compliance_flags: defaults.flags || [],
+        ...(idempotency ? { idempotency_key: idempotency } : {}),
+      };
+
+      document.getElementById('jsonPreview').textContent = JSON.stringify(payload, null, 2);
+    }
+
+    async function submitTask() {
+      const pillar = document.getElementById('termPillar').value;
+      const taskType = document.getElementById('termTaskType').value;
+      const objective = document.getElementById('termObjective').value;
+      const priority = parseInt(document.getElementById('termPriority').value);
+      const idempotency = document.getElementById('termIdempotency').value || null;
+
+      if (!pillar || !taskType || !objective) {
+        showToast('Pillar, task type, and objective are required', 'error');
+        return;
+      }
+
+      // Validate task_type regex
+      if (!/^[a-z][a-z0-9_]*$/.test(taskType)) {
+        showToast('task_type must match ^[a-z][a-z0-9_]*$', 'error');
+        return;
+      }
+
+      const defaults = PILLAR_DEFAULTS[pillar] || {};
+      const needsIdempotency = (defaults.flags || []).some(f => ['external_action', 'financial'].includes(f));
+      if (needsIdempotency && !idempotency) {
+        showToast('Idempotency key required for financial/external_action tasks', 'error');
+        return;
+      }
+
+      try {
+        const result = await apiPost('/tasks/submit', {
+          task_type: taskType,
+          pillar,
+          objective,
+          priority,
+          idempotency_key: idempotency,
+        });
+        showToast(`Task submitted: ${result.task_id?.slice(0,8)}…`, 'success');
+        // Clear form
+        document.getElementById('termPillar').value = '';
+        document.getElementById('termTaskType').value = '';
+        document.getElementById('termObjective').value = '';
+        document.getElementById('termPriority').value = '2';
+        document.getElementById('termIdempotency').value = '';
+        onPillarChange();
+        await fetchAll();
+      } catch (e) {
+        showToast('Submit failed: ' + e.message, 'error');
+      }
+    }
+
+    // ── UI Helpers ─────────────────────────────────────────────────────
+    function timeAgo(dateStr) {
+      if (!dateStr) return '—';
+      const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
+      if (diff < 60) return Math.round(diff) + 's ago';
+      if (diff < 3600) return Math.round(diff / 60) + 'm ago';
+      if (diff < 86400) return Math.round(diff / 3600) + 'h ago';
+      return Math.round(diff / 86400) + 'd ago';
+    }
+
+    function formatTime(dateStr) {
+      if (!dateStr) return '—';
+      return new Date(dateStr).toLocaleString('en-US', {
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 4000);
+    }
+
+    function showConfirm(title, message, action, type = 'approve') {
+      document.getElementById('confirmTitle').textContent = title;
+      document.getElementById('confirmMessage').textContent = message;
+      const btn = document.getElementById('confirmBtn');
+      btn.className = `btn btn-${type}`;
+      btn.textContent = type === 'approve' ? '✓ Approve' : '✕ Reject';
+      pendingConfirmAction = action;
+      document.getElementById('confirmModal').style.display = 'flex';
+    }
+
+    function closeConfirm() {
+      document.getElementById('confirmModal').style.display = 'none';
+      pendingConfirmAction = null;
+    }
+
+    async function confirmAction() {
+      if (pendingConfirmAction) {
+        await pendingConfirmAction();
+      }
+      closeConfirm();
+    }
+
+    // ── Initialize ─────────────────────────────────────────────────────
+    async function init() {
+      await fetchAll();
+      // Auto-refresh every 5 seconds
+      setInterval(fetchAll, 5000);
+      // Update clock
+      setInterval(() => {
+        document.getElementById('statusTime').textContent = new Date().toLocaleTimeString();
+      }, 1000);
+    }
+
+    init();
+  </script>
+</body>
+</html>

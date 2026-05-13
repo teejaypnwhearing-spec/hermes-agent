@@ -1,0 +1,74 @@
+{
+  "name": "FSH Retry Queue",
+  "nodes": [
+    {
+      "id": "schedule",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [240, 300],
+      "parameters": {
+        "rule": {"interval": [{"field": "minutes", "minutesInterval": 5}]}
+      }
+    },
+    {
+      "id": "fetch_ready",
+      "name": "Fetch Ready Retries",
+      "type": "n8n-nodes-base.postgres",
+      "position": [440, 300],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT rq.retry_id, rq.task_id, rq.attempt_number, rq.max_retries, t.pillar, t.task_type FROM retry_queue rq JOIN tasks t ON t.task_id = rq.task_id WHERE rq.status = 'pending' AND rq.retry_after <= NOW() ORDER BY rq.retry_after ASC LIMIT 10"
+      }
+    },
+    {
+      "id": "split",
+      "name": "Split Retries",
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [640, 300],
+      "parameters": {"batchSize": 1, "options": {}}
+    },
+    {
+      "id": "mark_processing",
+      "name": "Mark Processing",
+      "type": "n8n-nodes-base.postgres",
+      "position": [840, 200],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE retry_queue SET status = 'processing', last_attempted = NOW() WHERE retry_id = '{{ $json.retry_id }}'"
+      }
+    },
+    {
+      "id": "call_fsh",
+      "name": "Retry via FSH Server",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [840, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "=http://fsh-server:8000/webhook/retry",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\"task_id\": \"{{ $json.task_id }}\", \"retry_id\": \"{{ $json.retry_id }}\", \"attempt\": {{ $json.attempt_number }}}"
+      }
+    },
+    {
+      "id": "mark_result",
+      "name": "Mark Result",
+      "type": "n8n-nodes-base.postgres",
+      "position": [1040, 300],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE retry_queue SET status = CASE WHEN '{{ $json.success }}' = 'true' THEN 'succeeded' ELSE 'failed' END WHERE retry_id = '{{ $('Split Retries').item.json.retry_id }}'"
+      }
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes":   {"main": [[{"node": "Fetch Ready Retries", "type": "main", "index": 0}]]},
+    "Fetch Ready Retries":{"main": [[{"node": "Split Retries",       "type": "main", "index": 0}]]},
+    "Split Retries":     {"main": [[{"node": "Mark Processing",      "type": "main", "index": 0}]]},
+    "Mark Processing":   {"main": [[{"node": "Retry via FSH Server", "type": "main", "index": 0}]]},
+    "Retry via FSH Server":{"main": [[{"node": "Mark Result",        "type": "main", "index": 0}]]}
+  },
+  "active": true,
+  "settings": {"executionOrder": "v1"},
+  "tags": ["fsh", "retry"]
+}

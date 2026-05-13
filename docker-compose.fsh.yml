@@ -1,0 +1,113 @@
+version: "3.9"
+
+# =============================================================================
+# FSH Command Center — Local Development Stack
+# =============================================================================
+# Services:
+#   postgres   — primary truth layer (port 5432)
+#   n8n        — approval callbacks & retry queue (port 5678)
+#   fsh-server — orchestrator webhook server (port 8000)
+#
+# Usage:
+#   make up          → start all services
+#   make migrate     → apply core_schema.sql
+#   make down        → stop all services
+#   make logs        → tail all logs
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Postgres
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: fsh_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       fsh_command_center
+      POSTGRES_USER:     fsh_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fsh_dev_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Auto-apply schema on first boot
+      - ./fsh-command-center/database/core_schema.sql:/docker-entrypoint-initdb.d/01_core_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fsh_user -d fsh_command_center"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # n8n — async bridge (approval callbacks, retry queue, status webhooks)
+  # ---------------------------------------------------------------------------
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: fsh_n8n
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      N8N_HOST:            ${N8N_HOST:-localhost}
+      N8N_PORT:            5678
+      N8N_PROTOCOL:        http
+      WEBHOOK_URL:         http://localhost:5678/
+      # Postgres backend for n8n (optional — uses SQLite by default)
+      # DB_TYPE:           postgresdb
+      # DB_POSTGRESDB_HOST: postgres
+      # DB_POSTGRESDB_DATABASE: n8n
+      # DB_POSTGRESDB_USER: fsh_user
+      # DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-fsh_dev_password}
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER:   ${N8N_USER:-admin}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_PASSWORD:-fsh_n8n_password}
+      EXECUTIONS_PROCESS:  main
+      GENERIC_TIMEZONE:    America/Los_Angeles
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./fsh-command-center/n8n-workflows:/home/node/.n8n/workflows:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5678/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # FSH Orchestrator Webhook Server
+  # ---------------------------------------------------------------------------
+  fsh-server:
+    build:
+      context: .
+      dockerfile: fsh-command-center/Dockerfile.server
+    container_name: fsh_server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL:    postgresql://fsh_user:${POSTGRES_PASSWORD:-fsh_dev_password}@postgres:5432/fsh_command_center
+      N8N_BASE_URL:    http://n8n:5678
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ABACUS_API_URL:  ${ABACUS_API_URL:-https://apps.abacus.ai}
+      ABACUS_API_KEY:  ${ABACUS_API_KEY:-}
+      MANUS_API_URL:   ${MANUS_API_URL:-https://api.manus.ai}
+      MANUS_API_KEY:   ${MANUS_API_KEY:-}
+      CLAUDE_MODEL:    ${CLAUDE_MODEL:-claude-opus-4-5}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./fsh-command-center:/app/fsh-command-center:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+  n8n_data:
