@@ -72,13 +72,12 @@ logs:
 # Database
 # ---------------------------------------------------------------------------
 migrate:
-	@echo "Applying FSH schema to postgres..."
+	@echo "Applying FSH migrations to postgres..."
 	@if [ -z "$$DATABASE_URL" ]; then \
 		export DATABASE_URL="postgresql://fsh_user:$${POSTGRES_PASSWORD:-fsh_dev_password}@localhost:5432/fsh_command_center"; \
 	fi; \
-	docker exec -i fsh_postgres psql -U fsh_user -d fsh_command_center \
-		< fsh-command-center/database/core_schema.sql && \
-	echo "✓ Schema applied successfully"
+	python3 fsh-command-center/database/migrate.py && \
+	echo "✓ Migrations applied successfully"
 
 shell-db:
 	docker exec -it fsh_postgres psql -U fsh_user -d fsh_command_center

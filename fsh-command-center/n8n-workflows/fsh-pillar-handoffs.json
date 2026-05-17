@@ -1,0 +1,95 @@
+{
+  "name": "FSH Pillar Handoffs",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "name": "Check New Leads",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT lead_id, address, owner_name, lead_score FROM gridline_leads WHERE lead_score > 85 AND outreach_status = 'new' AND NOT EXISTS (SELECT 1 FROM tasks WHERE objective ILIKE '%' || address || '%' AND pillar = 'content')"
+      },
+      "name": "Fetch High Score Leads",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://fsh-server:8000/tasks/submit",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "pillar",
+              "value": "content"
+            },
+            {
+              "name": "task_type",
+              "value": "generate_tiktok_hook"
+            },
+            {
+              "name": "objective",
+              "value": "Generate a viral TikTok hook for the property at {{ $node[\"Fetch High Score Leads\"].json[\"address\"] }}. Owner is {{ $node[\"Fetch High Score Leads\"].json[\"owner_name\"] }}. Focus on distress signals and equity gap."
+            },
+            {
+              "name": "priority",
+              "value": 2
+            }
+          ]
+        }
+      },
+      "name": "Submit Content Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        650,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Check New Leads": {
+      "main": [
+        [
+          {
+            "node": "Fetch High Score Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch High Score Leads": {
+      "main": [
+        [
+          {
+            "node": "Submit Content Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
