@@ -1,0 +1,40 @@
+{
+  "mao_id": "770e8400-e29b-41d4-a716-446655440020",
+  "lead_id": "550e8400-e29b-41d4-a716-446655440099",
+  "property_address": "1234 N Oak St, Spokane, WA 99201",
+  "arv": 285000,
+  "repair_estimate": 35000,
+  "mao_value": 164500,
+  "mao_multiplier": 0.70,
+  "desired_profit": 25000,
+  "confidence": 0.72,
+  "assumptions": {
+    "arv_source": "3 comparable sales within 0.5 miles, last 6 months",
+    "repair_estimate_source": "Visual inspection + contractor estimate",
+    "market_condition": "Stable, slight appreciation in Spokane County",
+    "holding_cost_estimate": 1500
+  },
+  "comp_sources": [
+    {
+      "address": "1220 N Oak St, Spokane, WA 99201",
+      "sale_price": 290000,
+      "sale_date": "2026-03-15",
+      "source": "MLS"
+    },
+    {
+      "address": "1300 N Oak St, Spokane, WA 99201",
+      "sale_price": 278000,
+      "sale_date": "2026-02-20",
+      "source": "MLS"
+    },
+    {
+      "address": "1150 N Oak St, Spokane, WA 99201",
+      "sale_price": 282000,
+      "sale_date": "2026-04-01",
+      "source": "MLS"
+    }
+  ],
+  "status": "draft",
+  "compliance_flags": ["financial"],
+  "created_at": "2026-05-14T17:00:00Z"
+}

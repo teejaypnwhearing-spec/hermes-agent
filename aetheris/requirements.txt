@@ -1,0 +1,8 @@
+"""
+AETHERIS Gridline Runtime — Requirements
+
+Install with: pip install -r requirements.txt
+"""
+
+psycopg2-binary>=2.9.0
+python-dotenv>=1.0.0

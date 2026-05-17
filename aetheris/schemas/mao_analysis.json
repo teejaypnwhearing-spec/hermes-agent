@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://aetheris.fermier.io/schemas/mao_analysis.json",
+  "title": "MAO Analysis Result",
+  "description": "Maximum Allowable Offer analysis output for a property. Produced by the gridline-mao-analysis skill.",
+  "type": "object",
+  "required": ["mao_id", "lead_id", "arv", "mao_value", "mao_multiplier", "confidence"],
+  "properties": {
+    "mao_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique analysis identifier"
+    },
+    "lead_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Associated lead"
+    },
+    "property_address": {
+      "type": "string",
+      "description": "Property address being analyzed"
+    },
+    "arv": {
+      "type": "number",
+      "minimum": 0,
+      "description": "After Repair Value (dollar amount)"
+    },
+    "repair_estimate": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Estimated repair cost"
+    },
+    "mao_value": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Maximum Allowable Offer (the calculated maximum purchase price)"
+    },
+    "mao_multiplier": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "default": 0.70,
+      "description": "MAO multiplier applied (typically 70% of ARV)"
+    },
+    "desired_profit": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Target profit margin"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Confidence level in the analysis (0.0-1.0)"
+    },
+    "assumptions": {
+      "type": "object",
+      "default": {},
+      "description": "Key assumptions used in the calculation"
+    },
+    "comp_sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "address": { "type": "string" },
+          "sale_price": { "type": "number" },
+          "sale_date": { "type": "string", "format": "date" },
+          "source": { "type": "string" }
+        }
+      },
+      "default": [],
+      "description": "Comparable properties used for ARV"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "reviewed", "approved", "rejected"],
+      "default": "draft"
+    },
+    "compliance_flags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": ["financial"],
+      "description": "Compliance flags for this analysis"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}

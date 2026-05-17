@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://aetheris.fermier.io/schemas/handoff_packet.json",
+  "title": "FSH Handoff Packet",
+  "description": "Structured packet for task handoff between adapters. Records why a task moved from one adapter to another.",
+  "type": "object",
+  "required": ["handoff_id", "task_id", "from_adapter", "to_adapter", "reason"],
+  "properties": {
+    "handoff_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique handoff identifier"
+    },
+    "task_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "The task being handed off"
+    },
+    "from_adapter": {
+      "type": "string",
+      "enum": ["hermes", "abacus", "claude", "manus"],
+      "description": "Source adapter"
+    },
+    "to_adapter": {
+      "type": "string",
+      "enum": ["hermes", "abacus", "claude", "manus"],
+      "description": "Destination adapter"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Why the handoff occurred"
+    },
+    "context_payload": {
+      "type": "object",
+      "default": {},
+      "description": "Serialized task state for the receiving adapter"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the handoff occurred"
+    }
+  },
+  "additionalProperties": false
+}

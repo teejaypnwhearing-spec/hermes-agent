@@ -1,0 +1,37 @@
+{
+  "batch_id": "investra-2026-05-14",
+  "source": "investra",
+  "imported_at": "2026-05-14T06:00:00Z",
+  "records": [
+    {
+      "property_address": "1234 N Oak St, Spokane, WA 99201",
+      "owner_name": "Eleanor Vance",
+      "equity_pct": 62,
+      "motivation_score": 8,
+      "distress_flags": ["tax_delinquent", "absentee_owner"],
+      "arv": 285000,
+      "repair_estimate": 35000,
+      "source_id": "INV-001"
+    },
+    {
+      "property_address": "567 W Pine Ave, Spokane, WA 99202",
+      "owner_name": "Marcus Cole",
+      "equity_pct": 28,
+      "motivation_score": 4,
+      "distress_flags": ["recent_listing"],
+      "arv": 195000,
+      "repair_estimate": 12000,
+      "source_id": "INV-002"
+    },
+    {
+      "property_address": "890 S Maple Dr, Spokane, WA 99203",
+      "owner_name": "Sarah Jenkins",
+      "equity_pct": 45,
+      "motivation_score": 7,
+      "distress_flags": ["pre_foreclosure"],
+      "arv": 220000,
+      "repair_estimate": 28000,
+      "source_id": "INV-003"
+    }
+  ]
+}

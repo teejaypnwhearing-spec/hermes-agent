@@ -1,0 +1,18 @@
+{
+  "gate_id": "660e8400-e29b-41d4-a716-446655440010",
+  "task_id": "550e8400-e29b-41d4-a716-446655440002",
+  "approval_level": 2,
+  "status": "pending",
+  "approver": null,
+  "approval_token": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "requested_at": "2026-05-14T16:00:00Z",
+  "resolved_at": null,
+  "notes": null,
+  "task_summary": {
+    "task_type": "gridline-deal-memo-builder",
+    "pillar": "gridline",
+    "objective": "Generate deal memo for 1234 N Oak St, Spokane, WA 99201",
+    "compliance_flags": ["financial", "irreversible", "external_action"],
+    "risk_assessment": "medium"
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://aetheris.fermier.io/schemas/task_packet.json",
+  "title": "FSH Task Packet",
+  "description": "Canonical task object for the FSH Command Center. 10-field normalized schema for all adapter routing.",
+  "type": "object",
+  "required": ["task_id", "pillar", "objective", "approval_level", "execution_engine"],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique task identifier (UUID v4)"
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "default": "1.0.0",
+      "description": "Schema version (semver)"
+    },
+    "pillar": {
+      "type": "string",
+      "enum": ["gridline", "research", "code", "file", "browser", "automation", "forge"],
+      "description": "Business pillar for task routing"
+    },
+    "objective": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "description": "Natural language description of what the task should accomplish"
+    },
+    "input_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source": { "type": "string" },
+          "path": { "type": "string" },
+          "url": { "type": "string", "format": "uri" },
+          "content": { "type": "object" }
+        }
+      },
+      "default": [],
+      "description": "Input data sources (URLs, file paths, inline content)"
+    },
+    "required_outputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "format": { "type": "string" },
+          "path": { "type": "string" },
+          "schema_ref": { "type": "string" }
+        }
+      },
+      "default": [],
+      "description": "Expected output formats and locations"
+    },
+    "approval_level": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2,
+      "default": 0,
+      "description": "0=none, 1=notify, 2=require_approval"
+    },
+    "execution_engine": {
+      "type": "string",
+      "enum": ["hermes", "abacus", "claude", "manus"],
+      "description": "Target runtime adapter"
+    },
+    "storage_targets": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["postgres", "notion", "local_path", "s3"]
+      },
+      "default": ["postgres"],
+      "description": "Where to persist results"
+    },
+    "deadline": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "ISO 8601 deadline or null"
+    },
+    "compliance_flags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["pii", "external_action", "irreversible", "financial", "rcw_18_85"]
+      },
+      "default": [],
+      "description": "Compliance and regulatory flags"
+    },
+    "task_type": {
+      "type": "string",
+      "description": "Skill identifier (e.g., gridline-lead-ingest)"
+    },
+    "context_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "default": [],
+      "description": "Additional context for task execution"
+    }
+  },
+  "additionalProperties": false
+}

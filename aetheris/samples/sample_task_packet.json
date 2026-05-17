@@ -1,0 +1,25 @@
+{
+  "task_id": "550e8400-e29b-41d4-a716-446655440001",
+  "schema_version": "1.0.0",
+  "pillar": "gridline",
+  "task_type": "gridline-lead-ingest",
+  "objective": "Ingest leads from Investra export at /data/investra/export_2026-05-14.csv",
+  "input_artifacts": [
+    {
+      "source": "filesystem",
+      "path": "/data/investra/export_2026-05-14.csv"
+    }
+  ],
+  "required_outputs": [
+    {
+      "format": "postgres",
+      "path": "leads"
+    }
+  ],
+  "approval_level": 0,
+  "execution_engine": "hermes",
+  "storage_targets": ["postgres"],
+  "deadline": null,
+  "compliance_flags": ["pii", "rcw_18_85"],
+  "context_artifacts": []
+}

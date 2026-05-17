@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://aetheris.fermier.io/schemas/hm_decision_log.json",
+  "title": "HM Decision Log",
+  "description": "Records human-in-the-loop (HM) decisions for audit and compliance. All approval, rejection, escalation, and override decisions are logged here.",
+  "type": "object",
+  "required": ["decision_id", "task_id", "decision_type", "decided_by"],
+  "properties": {
+    "decision_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique decision identifier"
+    },
+    "task_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "The task this decision pertains to"
+    },
+    "decision_type": {
+      "type": "string",
+      "enum": ["approve", "reject", "escalate", "override", "info_request"],
+      "description": "Type of decision made"
+    },
+    "decision_rationale": {
+      "type": ["string", "null"],
+      "description": "Why the decision was made"
+    },
+    "decided_by": {
+      "type": "string",
+      "description": "Human operator who made the decision"
+    },
+    "context_snapshot": {
+      "type": "object",
+      "default": {},
+      "description": "State of the task at decision time (for audit replay)"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}

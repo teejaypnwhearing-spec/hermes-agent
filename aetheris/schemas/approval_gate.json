@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://aetheris.fermier.io/schemas/approval_gate.json",
+  "title": "FSH Approval Gate",
+  "description": "Approval gate packet for human-in-the-loop decision points. Used when approval_level >= 1.",
+  "type": "object",
+  "required": ["gate_id", "task_id", "approval_level", "status"],
+  "properties": {
+    "gate_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique gate identifier"
+    },
+    "task_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "The task requiring approval"
+    },
+    "approval_level": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2,
+      "description": "0=none, 1=notify, 2=require_approval"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "approved", "rejected", "expired"],
+      "default": "pending"
+    },
+    "approver": {
+      "type": ["string", "null"],
+      "description": "Who approved/rejected (null if pending)"
+    },
+    "approval_token": {
+      "type": ["string", "null"],
+      "description": "One-time token for approval URL"
+    },
+    "requested_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "resolved_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "notes": {
+      "type": ["string", "null"],
+      "description": "Approver notes or rejection reason"
+    },
+    "task_summary": {
+      "type": "object",
+      "description": "Summary of the task for approver review",
+      "properties": {
+        "task_type": { "type": "string" },
+        "pillar": { "type": "string" },
+        "objective": { "type": "string" },
+        "compliance_flags": { "type": "array", "items": { "type": "string" } },
+        "risk_assessment": { "type": "string" }
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,99 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://aetheris.fermier.io/schemas/deal_memo.json",
+  "title": "Deal Memo",
+  "description": "Structured deal memo generated from MAO analysis and lead data. Approval level 2 required (irreversible financial decision).",
+  "type": "object",
+  "required": ["memo_id", "lead_id", "property_address", "offer_amount", "approval_level"],
+  "properties": {
+    "memo_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique deal memo identifier"
+    },
+    "lead_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Associated lead"
+    },
+    "mao_id": {
+      "type": ["string", "null"],
+      "format": "uuid",
+      "description": "Associated MAO analysis"
+    },
+    "property_address": {
+      "type": "string",
+      "description": "Subject property address"
+    },
+    "offer_amount": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Proposed offer amount"
+    },
+    "arv": {
+      "type": ["number", "null"],
+      "description": "After Repair Value"
+    },
+    "repair_estimate": {
+      "type": ["number", "null"],
+      "description": "Estimated repair cost"
+    },
+    "projected_profit": {
+      "type": ["number", "null"],
+      "description": "Projected profit (ARV - offer - repairs)"
+    },
+    "profit_margin_pct": {
+      "type": ["number", "null"],
+      "description": "Profit margin as percentage of ARV"
+    },
+    "risk_assessment": {
+      "type": "object",
+      "default": {},
+      "description": "Risk factors and mitigation strategies",
+      "properties": {
+        "market_risk": { "type": "string", "enum": ["low", "medium", "high"] },
+        "repair_risk": { "type": "string", "enum": ["low", "medium", "high"] },
+        "timeline_risk": { "type": "string", "enum": ["low", "medium", "high"] },
+        "overall_risk": { "type": "string", "enum": ["low", "medium", "high"] },
+        "mitigation_notes": { "type": "string" }
+      }
+    },
+    "compliance_flags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": ["financial", "irreversible", "external_action"],
+      "description": "Compliance and regulatory flags"
+    },
+    "approval_level": {
+      "type": "integer",
+      "const": 2,
+      "description": "Deal memos ALWAYS require level-2 approval (irreversible financial decision)"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "pending_approval", "approved", "rejected", "sent"],
+      "default": "draft"
+    },
+    "memo_content": {
+      "type": "object",
+      "description": "Full structured deal memo content",
+      "properties": {
+        "executive_summary": { "type": "string" },
+        "property_overview": { "type": "object" },
+        "financial_analysis": { "type": "object" },
+        "market_analysis": { "type": "object" },
+        "recommendation": { "type": "string" },
+        "next_steps": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "created_by": {
+      "type": "string",
+      "default": "system"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}

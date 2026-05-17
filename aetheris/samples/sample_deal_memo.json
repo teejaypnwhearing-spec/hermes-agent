@@ -1,0 +1,55 @@
+{
+  "memo_id": "880e8400-e29b-41d4-a716-446655440030",
+  "lead_id": "550e8400-e29b-41d4-a716-446655440099",
+  "mao_id": "770e8400-e29b-41d4-a716-446655440020",
+  "property_address": "1234 N Oak St, Spokane, WA 99201",
+  "offer_amount": 160000,
+  "arv": 285000,
+  "repair_estimate": 35000,
+  "projected_profit": 90000,
+  "profit_margin_pct": 31.6,
+  "risk_assessment": {
+    "market_risk": "low",
+    "repair_risk": "medium",
+    "timeline_risk": "low",
+    "overall_risk": "medium",
+    "mitigation_notes": "Repair estimate is medium-confidence; recommend formal inspection before contract execution"
+  },
+  "compliance_flags": ["financial", "irreversible", "external_action"],
+  "approval_level": 2,
+  "status": "pending_approval",
+  "memo_content": {
+    "executive_summary": "Opportunity to acquire 1234 N Oak St, Spokane, WA 99201 at $160,000 (56% of ARV). Property has strong equity position (62%), high motivation score (8), and two distress signals (tax delinquent, absentee owner). Projected profit of $90,000 after $35,000 in repairs.",
+    "property_overview": {
+      "address": "1234 N Oak St, Spokane, WA 99201",
+      "owner": "Eleanor Vance",
+      "equity_pct": 62,
+      "distress_flags": ["tax_delinquent", "absentee_owner"],
+      "tier": "B",
+      "score": 73.57
+    },
+    "financial_analysis": {
+      "arv": 285000,
+      "mao": 164500,
+      "proposed_offer": 160000,
+      "repair_estimate": 35000,
+      "projected_profit": 90000,
+      "roi_pct": 56.3
+    },
+    "market_analysis": {
+      "spokane_market": "Stable with slight appreciation",
+      "comps_count": 3,
+      "avg_comp_price": 283333,
+      "days_on_market_avg": 28
+    },
+    "recommendation": "PROCEED with offer at $160,000. Strong equity position and multiple distress signals indicate motivated seller. Recommend formal inspection before closing.",
+    "next_steps": [
+      "Submit offer at $160,000",
+      "Schedule property inspection",
+      "Prepare assignment contract if wholesale exit",
+      "Notify legal for RCW 18.85 compliance review"
+    ]
+  },
+  "created_by": "gridline-deal-memo-builder",
+  "created_at": "2026-05-14T17:30:00Z"
+}

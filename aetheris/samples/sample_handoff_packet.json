@@ -1,0 +1,15 @@
+{
+  "handoff_id": "990e8400-e29b-41d4-a716-446655440040",
+  "task_id": "550e8400-e29b-41d4-a716-446655440002",
+  "from_adapter": "hermes",
+  "to_adapter": "abacus",
+  "reason": "Task requires DeepAgent workflow execution for multi-step property research that exceeds Hermes single-skill scope",
+  "context_payload": {
+    "task_type": "gridline-seller-outreach",
+    "pillar": "gridline",
+    "lead_id": "550e8400-e29b-41d4-a716-446655440099",
+    "current_status": "approved_for_outreach",
+    "outreach_channel": "direct_mail"
+  },
+  "timestamp": "2026-05-14T18:00:00Z"
+}
