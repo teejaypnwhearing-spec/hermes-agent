@@ -109,7 +109,7 @@ ANTHROPIC_API_KEY=<key>
 
 ## Next Steps
 
-1. Fix HermesAdapter (`hermes run` → `hermes-agent --query`)
+1. ~~Fix HermesAdapter (`hermes run` → `hermes-agent --query`)~~ ✅ Fixed in `fix/hermes-adapter-p0`
 2. Wire real Investra export → lead_ingest.py
 3. Build gridline-mao-analysis skill
 4. Build gridline-deal-memo-builder skill
